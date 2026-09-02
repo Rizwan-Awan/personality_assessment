@@ -15,7 +15,8 @@ def deterministic_scores(questions, answers):
     for q in questions:
         if q["id"] not in answers:
             continue
-        value = RESPONSE_SCORE[answers[q["id"]]]
+        # Use .get() with a default of 3 so missing keys never throw a KeyError
+        value = RESPONSE_SCORE.get(answers[q["id"]], 3)
         score = 6 - value if q.get("reverse") else value
         totals[q["trait"]] += score
         counts[q["trait"]] += 1
@@ -26,11 +27,6 @@ def deterministic_scores(questions, answers):
 
 
 def _synthetic_training_data(n=3000, seed=42):
-    """Create synthetic training data for the demo ML stage.
-
-    This model is an engineering demonstration, not a scientifically validated
-    personality instrument. Targets are generated from the question rubric plus noise.
-    """
     rng = np.random.default_rng(seed)
     n_q = len(QUESTIONS)
     X = rng.integers(1, 6, size=(n, n_q)).astype(float)
@@ -63,7 +59,6 @@ def ml_scores(questions, answers):
         )
         _MODEL.fit(X, y)
 
-    # Keep a stable feature order independent of UI randomization.
     vector = [RESPONSE_SCORE.get(answers.get(q["id"]), 3) for q in QUESTIONS]
     pred = _MODEL.predict(np.array(vector, dtype=float).reshape(1, -1))[0]
     return {trait: round(float(np.clip(value, 0, 100)), 1) for trait, value in zip(TRAITS, pred)}
